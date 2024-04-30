@@ -59,10 +59,10 @@ stream.Of([]string{"apple", "banana", "cherry"}).ForEach(func(str string) {
 })
 ```
 
-## Combine several stream operations
+## Chaining several stream operations
 
 ```go
-pacage main
+package main
 
 import (
     "fmt"
