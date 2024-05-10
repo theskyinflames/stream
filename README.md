@@ -59,6 +59,30 @@ stream.Of([]string{"apple", "banana", "cherry"}).ForEach(func(str string) {
 })
 ```
 
+### Count
+
+The `Count` method returns the length of the underlying slice of the stream
+
+```go
+stream.Of([]int{1,2,3}).Count()
+```
+
+### DistinctFunc
+
+This method returns a new stream which is a copy of the primary one without duplicates
+
+```go
+stream.Of([]int{1,1,2,3}).DistinctFunc(func(v, w int) int {
+    if v == w {
+        return 0
+    }
+    if v < w {
+        return -1
+    }
+    return 1
+})
+```
+
 ## Chaining several stream operations
 
 ```go
@@ -66,29 +90,63 @@ package main
 
 import (
     "fmt"
+    "strings"
+
     "theskyinflames/stream/pkg/stream"
 )
 
-func main() {
-    s := stream.Of([]int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10})
-
-    result := s.Filter(func(v int) bool {
-        return v%2 == 0
-    }).Map(func(v int) int {
-        return v * 2
-    }).Reduce(func(acc, v int) int {
-        return acc + v
-    })
-
-    fmt.Printf("Result: %d\n", result)
-
-    s.ForEach(func(v int) {
-        println(v)
-    })
-
-    fmt.Printf("Result: %d\n", s.Reduce(func(acc, v int) int {
-        return acc + v
-    }))
+type foo struct {
+    ID          int
+    accumulated int
+    description string
+    data        []int
 }
 
+func (f foo) String() string {
+    return fmt.Sprintf("accumulated: %d, description: %s", f.accumulated, f.description)
+}
+
+func main() {
+    s := stream.Of([]foo{
+        {ID: 1, accumulated: 1, description: "foo", data: []int{1, 2, 3, 4, 5}},
+        {ID: 2, accumulated: 2, description: "bar", data: []int{1, 2, 3, 4, 5}},
+        {ID: 3, accumulated: 3, description: "baz", data: []int{1, 2, 3, 4, 5}},
+        {ID: 4, accumulated: 4, description: "qux", data: []int{1, 2, 3, 4, 5}},
+        {ID: 5, accumulated: 5, description: "zoo", data: []int{1, 2, 3, 4, 5}},
+        {ID: 6, accumulated: 5, description: "zoo", data: []int{1, 2, 3, 4, 5}},
+    })
+
+    result := s.DistinctFunc(func(f, g foo) int {
+        return strings.Compare(f.String(), g.String())
+    }).Map(func(f foo) foo {
+        f.description = strings.ToUpper(f.description)
+        return f
+    }).Filter(func(f foo) bool {
+        return f.ID%2 == 0
+    }).Reduce(func(f1, f2 foo) foo {
+        f1.accumulated += f2.accumulated
+        return f1
+    })
+
+    fmt.Printf("Result: %#v\n\n", result)
+
+    // Primary stream is not modified
+    s.ForEach(func(f foo) {
+        fmt.Printf("ID: %d, accumulated: %d, description: %s, data: %#v\n", f.ID, f.accumulated, f.description, f.data)
+    })
+}
+```
+
+Run it:
+
+```sh
+❯ go run example/main.go
+Result: main.foo{ID:2, accumulated:6, description:"BAR", data:[]int{1, 2, 3, 4, 5}}
+
+ID: 1, accumulated: 1, description: foo, data: []int{1, 2, 3, 4, 5}
+ID: 2, accumulated: 2, description: bar, data: []int{1, 2, 3, 4, 5}
+ID: 3, accumulated: 3, description: baz, data: []int{1, 2, 3, 4, 5}
+ID: 4, accumulated: 4, description: qux, data: []int{1, 2, 3, 4, 5}
+ID: 5, accumulated: 5, description: zoo, data: []int{1, 2, 3, 4, 5}
+ID: 6, accumulated: 5, description: zoo, data: []int{1, 2, 3, 4, 5}
 ```

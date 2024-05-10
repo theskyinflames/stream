@@ -1,6 +1,10 @@
 // Package stream contains a generic Stream type that can be used to filter, map and reduce slices of any type
 package stream
 
+import (
+	"slices"
+)
+
 // Stream is a generic type that holds a slice of any type
 type Stream[T any] struct {
 	stream []T
@@ -40,11 +44,32 @@ func (s Stream[T]) Reduce(f func(T, T) T) T {
 	return result
 }
 
-// ForEach applies the given function to all elements
+// ForEach applies the given function to all elements of the primary stream
 func (s Stream[T]) ForEach(f func(T)) {
 	for _, v := range s.stream {
 		f(v)
 	}
+}
+
+// Count returns the number of elements in the Stream
+func (s Stream[T]) Count() int {
+	return len(s.stream)
+}
+
+// DistinctFunc returns a new Stream with the distinct elements of the primary stream
+func (s Stream[T]) DistinctFunc(compareFunc func(i, j T) int) Stream[T] {
+	source := make([]T, len(s.stream))
+	copy(source, s.stream)
+
+	slices.SortFunc(source, func(i, j T) int {
+		return compareFunc(i, j)
+	})
+
+	result := slices.CompactFunc(source, func(i, j T) bool {
+		return compareFunc(i, j) == 0
+	})
+
+	return Of(result)
 }
 
 // ToSlice returns the slice of the Stream

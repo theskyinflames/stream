@@ -48,3 +48,23 @@ func TestStream_ToSlice(t *testing.T) {
 
 	assert.ElementsMatch(t, slice, result)
 }
+
+func TestStream_Count(t *testing.T) {
+	result := stream.Of(slice).Count()
+
+	assert.Equal(t, 10, result)
+}
+
+func TestStream_DistinctFunc(t *testing.T) {
+	result := stream.Of(slice).DistinctFunc(func(v, w int) int {
+		if v == w {
+			return 0
+		}
+		if v < w {
+			return -1
+		}
+		return 1
+	})
+
+	assert.ElementsMatch(t, slice, result.ToSlice())
+}
